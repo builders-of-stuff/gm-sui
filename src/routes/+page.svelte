@@ -5,6 +5,7 @@
     walletAdapter
   } from '@builders-of-stuff/svelte-sui-wallet-adapter';
   import CalHeatmap from 'cal-heatmap';
+
   import 'cal-heatmap/cal-heatmap.css';
 
   import { Button } from '$lib/components/ui/button/index.js';
@@ -12,9 +13,43 @@
 
   let commitMessage = $state('');
 
+  let gmData = [
+    { date: '2024-01-01', value: 3 },
+    { date: '2024-04-02', value: 6 },
+    { date: '2024-06-02', value: 100 }
+  ];
+
   if (browser) {
     const cal = new CalHeatmap();
-    cal.paint({});
+    cal.paint({
+      theme: 'light',
+      range: 12,
+      domain: {
+        // Gaps between months not possible: https://github.com/wa0x6e/cal-heatmap/issues/184
+        type: 'month',
+        gutter: 4
+      },
+      subDomain: {
+        type: 'day',
+        gutter: 4
+      },
+      date: {
+        start: new Date('2024-01-01'),
+        end: new Date('2024-12-31')
+      },
+      data: {
+        source: gmData,
+        x: 'date',
+        y: 'value'
+      },
+      scale: {
+        color: {
+          scheme: 'Cool',
+          type: 'linear',
+          domain: [0, 30]
+        }
+      }
+    });
   }
 </script>
 
