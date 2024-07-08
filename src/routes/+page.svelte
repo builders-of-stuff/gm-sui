@@ -5,6 +5,8 @@
     walletAdapter
   } from '@builders-of-stuff/svelte-sui-wallet-adapter';
   import CalHeatmap from 'cal-heatmap';
+  import { DateTime } from 'luxon';
+  import Tooltip from 'cal-heatmap/plugins/Tooltip';
 
   import 'cal-heatmap/cal-heatmap.css';
 
@@ -21,35 +23,53 @@
 
   if (browser) {
     const cal = new CalHeatmap();
-    cal.paint({
-      theme: 'light',
-      range: 12,
-      domain: {
-        // Gaps between months not possible: https://github.com/wa0x6e/cal-heatmap/issues/184
-        type: 'month',
-        gutter: 4
-      },
-      subDomain: {
-        type: 'day',
-        gutter: 4
-      },
-      date: {
-        start: new Date('2024-01-01'),
-        end: new Date('2024-12-31')
-      },
-      data: {
-        source: gmData,
-        x: 'date',
-        y: 'value'
-      },
-      scale: {
-        color: {
-          scheme: 'Cool',
-          type: 'linear',
-          domain: [0, 30]
+    cal.paint(
+      {
+        theme: 'light',
+        range: 12,
+        domain: {
+          // Gaps between months not possible: https://github.com/wa0x6e/cal-heatmap/issues/184
+          type: 'month',
+          gutter: 4
+        },
+        subDomain: {
+          type: 'day',
+          gutter: 4
+        },
+        date: {
+          start: new Date('2024-01-01'),
+          end: new Date('2024-12-31')
+        },
+        data: {
+          source: gmData,
+          x: 'date',
+          y: 'value'
+        },
+        scale: {
+          color: {
+            scheme: 'Cool',
+            type: 'linear',
+            domain: [0, 30]
+          }
         }
-      }
-    });
+      },
+      // Runs fine, but type issues: https://github.com/wa0x6e/cal-heatmap/issues/520
+      [
+        [
+          Tooltip,
+          {
+            enabled: true,
+            text: (timestamp: number, value: number) => {
+              const date = new Date(timestamp);
+              // e.g. 6 GMs on January 6th
+              const formattedDate = DateTime.fromJSDate(date).toFormat('MMMM d');
+
+              return `${value || 0} GMs on ${formattedDate}`;
+            }
+          }
+        ]
+      ]
+    );
   }
 </script>
 
