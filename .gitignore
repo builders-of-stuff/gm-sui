@@ -1,4 +1,5 @@
 node_modules
+gm_sui/build
 
 # Output
 .output
