@@ -13,10 +13,13 @@
 
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
+  import { toast } from 'svelte-sonner';
+
   import { GM_PACKAGE_ID, GM_TRACKER_ID } from '$lib/shared/shared.constant';
 
   let commitMessage = $state('');
   let isCommitEnabled = $derived(!!commitMessage && !!walletAdapter.currentAccount);
+  let showToast = $state(false);
 
   let gmData = [
     { date: '2024-01-01', value: 3 },
@@ -93,17 +96,23 @@
 
     const { bytes, signature } = await walletAdapter.signTransaction(tx as any, {});
 
-    const executedTx = await walletAdapter.suiClient.executeTransactionBlock({
-      transactionBlock: bytes,
-      signature,
-      options: {
-        showRawEffects: true
-      }
-    });
+    try {
+      const executedTx = await walletAdapter.suiClient.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: {
+          showRawEffects: true
+        }
+      });
 
-    console.log('executedTx: ', executedTx);
+      toast.success('gm committed');
+      commitMessage = '';
 
-    return executedTx;
+      console.log('executedTx: ', executedTx);
+    } catch (error: any) {
+      console.log('error: ', error);
+      toast.error(error?.message);
+    }
   };
 </script>
 
