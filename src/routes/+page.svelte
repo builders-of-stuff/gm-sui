@@ -5,6 +5,7 @@
   } from '@builders-of-stuff/svelte-sui-wallet-adapter';
   import CalHeatmap from 'cal-heatmap';
   import { DateTime } from 'luxon';
+  import { Transaction } from '@mysten/sui/transactions';
   // @ts-ignore
   import Tooltip from 'cal-heatmap/plugins/Tooltip';
 
@@ -12,8 +13,10 @@
 
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
+  import { GM_PACKAGE_ID, GM_TRACKER_ID } from '$lib/shared/shared.constant';
 
   let commitMessage = $state('');
+  let isCommitEnabled = $derived(!!commitMessage && !!walletAdapter.currentAccount);
 
   let gmData = [
     { date: '2024-01-01', value: 3 },
@@ -71,8 +74,36 @@
     ]
   );
 
-  const handleGmCommit = () => {
-    console.log('clicked');
+  const handleGmCommit = async () => {
+    const tx = new Transaction();
+
+    tx.moveCall({
+      target: `${GM_PACKAGE_ID}::gm::new_gm`,
+      arguments: [
+        // key,
+        tx.pure.string(`testy-${Math.random()}`),
+        // message
+        tx.pure.string(`${commitMessage}`),
+        // timezone
+        tx.pure.string('UTC'),
+        // gm_tracker: &mut GmTracker,
+        tx.object(GM_TRACKER_ID)
+      ]
+    });
+
+    const { bytes, signature } = await walletAdapter.signTransaction(tx as any, {});
+
+    const executedTx = await walletAdapter.suiClient.executeTransactionBlock({
+      transactionBlock: bytes,
+      signature,
+      options: {
+        showRawEffects: true
+      }
+    });
+
+    console.log('executedTx: ', executedTx);
+
+    return executedTx;
   };
 </script>
 
@@ -94,14 +125,9 @@
 
     <!-- Text field -->
     <form class="mx-auto mt-10 flex max-w-md gap-x-4">
-      <Input
-        type="email"
-        placeholder="gm"
-        class="max-w-xs"
-        bind:value={commitMessage}
-      />
+      <Input type="text" placeholder="gm" class="max-w-xs" bind:value={commitMessage} />
 
-      <Button onclick={handleGmCommit} disabled={!commitMessage}>Commit</Button>
+      <Button onclick={handleGmCommit} disabled={!isCommitEnabled}>Commit</Button>
     </form>
   </div>
 </div>
