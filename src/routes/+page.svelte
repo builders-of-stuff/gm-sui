@@ -6,6 +6,7 @@
   import CalHeatmap from 'cal-heatmap';
   import { DateTime } from 'luxon';
   import { Transaction } from '@mysten/sui/transactions';
+  import { toast } from 'svelte-sonner';
   // @ts-ignore
   import Tooltip from 'cal-heatmap/plugins/Tooltip';
 
@@ -13,13 +14,11 @@
 
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
-  import { toast } from 'svelte-sonner';
 
   import { GM_PACKAGE_ID, GM_TRACKER_ID } from '$lib/shared/shared.constant';
 
   let commitMessage = $state('');
   let isCommitEnabled = $derived(!!commitMessage && !!walletAdapter.currentAccount);
-  let showToast = $state(false);
 
   let gmData = [
     { date: '2024-01-01', value: 3 },
@@ -27,13 +26,16 @@
     { date: '2024-06-02', value: 100 }
   ];
 
+  /**
+   * Contribution graph
+   */
   const cal = new CalHeatmap();
   cal.paint(
     {
       theme: 'light',
       range: 12,
       domain: {
-        // Gaps between months not possible: https://github.com/wa0x6e/cal-heatmap/issues/184
+        // Removing gaps between months not possible: https://github.com/wa0x6e/cal-heatmap/issues/184
         type: 'month',
         gutter: 4
       },
@@ -77,6 +79,9 @@
     ]
   );
 
+  /**
+   * GM commit
+   */
   const handleGmCommit = async () => {
     const tx = new Transaction();
 
@@ -94,9 +99,9 @@
       ]
     });
 
-    const { bytes, signature } = await walletAdapter.signTransaction(tx as any, {});
-
     try {
+      const { bytes, signature } = await walletAdapter.signTransaction(tx as any, {});
+
       const executedTx = await walletAdapter.suiClient.executeTransactionBlock({
         transactionBlock: bytes,
         signature,
@@ -106,9 +111,8 @@
       });
 
       toast.success('gm committed');
+      // console.log('executedTx: ', executedTx);
       commitMessage = '';
-
-      console.log('executedTx: ', executedTx);
     } catch (error: any) {
       console.log('error: ', error);
       toast.error(error?.message);
