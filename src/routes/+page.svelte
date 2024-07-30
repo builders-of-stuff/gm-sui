@@ -118,6 +118,41 @@
       toast.error(error?.message);
     }
   };
+
+  /**
+   * Fetch gms
+   */
+  const handleRpcFetch = async () => {
+    const object = await walletAdapter.suiClient.getObject({
+      id: GM_TRACKER_ID,
+      options: {
+        showContent: true,
+        showDisplay: true,
+        showType: true,
+        showOwner: true
+      }
+    });
+
+    console.log('object: ', object);
+
+    const res = await walletAdapter.suiClient.getDynamicFields({
+      // gms table id
+      parentId: '0xe77b73b650525671a8a106619a32115be8b88298111b82ba871cc5f71b2849d8'
+    });
+
+    console.log('outerres: ', res);
+
+    res.data.forEach(async (df) => {
+      const res = await walletAdapter.suiClient.getDynamicFieldObject({
+        parentId: '0xe77b73b650525671a8a106619a32115be8b88298111b82ba871cc5f71b2849d8',
+        name: df.name
+      });
+
+      console.log('innerres: ', res);
+    });
+
+    // console.log('gms: ', gms);
+  };
 </script>
 
 <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -141,6 +176,9 @@
       <Input type="text" placeholder="gm" class="max-w-xs" bind:value={commitMessage} />
 
       <Button onclick={handleGmCommit} disabled={!isCommitEnabled}>Commit</Button>
+      <Button onclick={handleRpcFetch} disabled={!walletAdapter.currentAccount}
+        >Fetch gms</Button
+      >
     </form>
   </div>
 </div>
