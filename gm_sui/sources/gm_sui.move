@@ -8,8 +8,6 @@ module gm_sui::gm {
 
     public struct GmTracker has key, store {
         id: UID,
-        // timestamp ms
-        epoch_start: u64,
         gms: ObjectTable<String, Gm>,
     }
 
@@ -17,7 +15,8 @@ module gm_sui::gm {
         id: UID,
         sender: address,
         message: String,
-        timezone: String
+        // timestamp ms
+        epoch_timestamp: u64,
     }
 
     fun init(ctx: &mut TxContext) {
@@ -26,20 +25,18 @@ module gm_sui::gm {
         };
         let gm_tracker = GmTracker {
             id: object::new(ctx),
-            epoch_start: tx_context::epoch_timestamp_ms(ctx),
             gms: object_table::new(ctx),
         };
-
         transfer::transfer(admin_cap, tx_context::sender(ctx));
         transfer::public_share_object(gm_tracker);
     }
 
-    public fun new_gm(key: String, message: String, timezone: String, gm_tracker: &mut GmTracker, ctx: &mut TxContext) {
+    public fun new_gm(key: String, message: String, gm_tracker: &mut GmTracker, ctx: &mut TxContext) {
         let gm = Gm {
             id: object::new(ctx),
             sender: tx_context::sender(ctx),
             message: message,
-            timezone: timezone,
+            epoch_timestamp: tx_context::epoch_timestamp_ms(ctx),
         };
 
         object_table::add(&mut gm_tracker.gms, key, gm);

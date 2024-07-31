@@ -19,65 +19,84 @@
 
   let commitMessage = $state('');
   let isCommitEnabled = $derived(!!commitMessage && !!walletAdapter.currentAccount);
+  let gms = $state([]) as any;
 
-  let gmData = [
-    { date: '2024-01-01', value: 3 },
-    { date: '2024-04-02', value: 6 },
-    { date: '2024-06-02', value: 100 }
-  ];
+  // let gmHeatmapData = [
+  //   { date: '2024-01-01', value: 3 },
+  //   { date: '2024-04-02', value: 6 },
+  //   { date: '2024-06-02', value: 100 }
+  // ];
+  let gmHeatmapData = $derived.by(() => {
+    console.log('2gms: ', gms);
+    const what = Object.values(
+      gms?.reduce?.((acc, { date }) => {
+        acc[date] = acc[date] || { date, value: 0 };
+        acc[date].value++;
+        return acc;
+      }, {})
+    );
 
-  /**
-   * Contribution graph
-   */
-  const cal = new CalHeatmap();
-  cal.paint(
-    {
-      theme: 'light',
-      range: 12,
-      domain: {
-        // Removing gaps between months not possible: https://github.com/wa0x6e/cal-heatmap/issues/184
-        type: 'month',
-        gutter: 4
-      },
-      subDomain: {
-        type: 'day',
-        gutter: 4
-      },
-      date: {
-        start: new Date('2024-01-01'),
-        end: new Date('2024-12-31')
-      },
-      data: {
-        source: gmData,
-        x: 'date',
-        y: 'value'
-      },
-      scale: {
-        color: {
-          scheme: 'Cool',
-          type: 'linear',
-          domain: [0, 30]
-        }
-      }
-    },
-    // Runs fine, but type issues: https://github.com/wa0x6e/cal-heatmap/issues/520
-    // @ts-ignore
-    [
-      [
-        Tooltip,
-        {
-          enabled: true,
-          text: (timestamp: number, value: number) => {
-            const date = new Date(timestamp);
-            // e.g. 6 GMs on January 6th
-            const formattedDate = DateTime.fromJSDate(date).toFormat('MMMM d');
+    console.log('what: ', what);
 
-            return `${value || 0} GMs on ${formattedDate}`;
+    return what;
+  });
+
+  let cal = new CalHeatmap();
+
+  $effect(() => {
+    console.log('gmHeatmapData: ', gmHeatmapData);
+    /**
+     * Contribution graph
+     */
+    cal.paint(
+      {
+        theme: 'light',
+        range: 12,
+        domain: {
+          // Removing gaps between months not possible: https://github.com/wa0x6e/cal-heatmap/issues/184
+          type: 'month',
+          gutter: 4
+        },
+        subDomain: {
+          type: 'day',
+          gutter: 4
+        },
+        date: {
+          start: new Date('2024-01-01'),
+          end: new Date('2024-12-31')
+        },
+        data: {
+          source: gmHeatmapData,
+          x: 'date',
+          y: 'value'
+        },
+        scale: {
+          color: {
+            scheme: 'Cool',
+            type: 'linear',
+            domain: [0, 30]
           }
         }
+      },
+      // Runs fine, but type issues: https://github.com/wa0x6e/cal-heatmap/issues/520
+      // @ts-ignore
+      [
+        [
+          Tooltip,
+          {
+            enabled: true,
+            text: (timestamp: number, value: number) => {
+              const date = new Date(timestamp);
+              // e.g. 6 GMs on January 6th
+              const formattedDate = DateTime.fromJSDate(date).toFormat('MMMM d');
+
+              return `${value || 0} GMs on ${formattedDate}`;
+            }
+          }
+        ]
       ]
-    ]
-  );
+    );
+  });
 
   /**
    * GM commit
@@ -92,8 +111,6 @@
         tx.pure.string(`testy-${Math.random()}`),
         // message
         tx.pure.string(`${commitMessage}`),
-        // timezone
-        tx.pure.string('UTC'),
         // gm_tracker: &mut GmTracker,
         tx.object(GM_TRACKER_ID)
       ]
@@ -133,25 +150,48 @@
       }
     });
 
-    console.log('object: ', object);
+    const gmsId = object?.data?.content?.fields?.gms?.fields?.id?.id;
 
-    const res = await walletAdapter.suiClient.getDynamicFields({
+    const gmsFields = await walletAdapter.suiClient.getDynamicFields({
       // gms table id
-      parentId: '0xe77b73b650525671a8a106619a32115be8b88298111b82ba871cc5f71b2849d8'
+      parentId: gmsId
     });
 
-    console.log('outerres: ', res);
+    const _gms = await Promise.all(
+      gmsFields.data
+        .map(async (df) => {
+          const gm = await walletAdapter.suiClient.getDynamicFieldObject({
+            parentId: gmsId,
+            name: df.name
+          });
 
-    res.data.forEach(async (df) => {
-      const res = await walletAdapter.suiClient.getDynamicFieldObject({
-        parentId: '0xe77b73b650525671a8a106619a32115be8b88298111b82ba871cc5f71b2849d8',
-        name: df.name
-      });
+          const gmFields = gm?.data?.content?.fields;
+          const gmEpochTimestamp = Number(gmFields?.epoch_timestamp);
 
-      console.log('innerres: ', res);
-    });
+          const gmDate = gmEpochTimestamp ? new Date(gmEpochTimestamp) : null;
 
-    // console.log('gms: ', gms);
+          if (gmDate) {
+            const year = gmDate.getFullYear();
+            const month = (gmDate.getMonth() + 1).toString().padStart(2, '0'); // getMonth() returns 0-11
+            const day = gmDate.getDate().toString().padStart(2, '0');
+
+            const formattedDate = `${year}-${month}-${day}`;
+
+            // Create array of objects keyed by date, with value as a count of GMs on that date
+            return {
+              ...gmFields,
+              date: formattedDate
+            };
+          }
+
+          return null;
+        })
+        .filter(Boolean)
+    );
+
+    gms = _gms;
+
+    console.log('gms: ', gms);
   };
 </script>
 
