@@ -15,12 +15,11 @@ module gm_sui::gm {
         id: UID,
         sender: address,
         message: String,
-        // timestamp ms
-        epoch_timestamp: u64,
+        timestamp: u64,
     }
 
     fun init(ctx: &mut TxContext) {
-        let admin_cap = AdminCap {
+           let admin_cap = AdminCap {
             id: object::new(ctx)
         };
         let gm_tracker = GmTracker {
@@ -31,12 +30,12 @@ module gm_sui::gm {
         transfer::public_share_object(gm_tracker);
     }
 
-    public fun new_gm(key: String, message: String, gm_tracker: &mut GmTracker, ctx: &mut TxContext) {
+    public fun new_gm(key: String, message: String, timestamp: u64, gm_tracker: &mut GmTracker, ctx: &mut TxContext) {
         let gm = Gm {
             id: object::new(ctx),
             sender: tx_context::sender(ctx),
             message: message,
-            epoch_timestamp: tx_context::epoch_timestamp_ms(ctx),
+            timestamp: timestamp,
         };
 
         object_table::add(&mut gm_tracker.gms, key, gm);
