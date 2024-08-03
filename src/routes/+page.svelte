@@ -15,18 +15,24 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
 
-  import { GM_PACKAGE_ID, GM_TRACKER_ID } from '$lib/shared/shared.constant';
+  import {
+    GM_PACKAGE_ID,
+    GM_TRACKER_ID,
+    TREASURY_CAP_HOLDER_ID
+  } from '$lib/shared/shared.constant';
 
   let commitMessage = $state('');
   let isCommitEnabled = $derived(!!commitMessage && !!walletAdapter.currentAccount);
   let gms = $state([]) as any;
   let hasFetched = $state(false);
 
-  // let gmHeatmapData = [
-  //   { date: '2024-01-01', value: 3 },
-  //   { date: '2024-04-02', value: 6 },
-  //   { date: '2024-06-02', value: 100 }
-  // ];
+  /**
+   * e.g. [
+    { date: '2024-01-01', value: 3 },
+    { date: '2024-04-02', value: 6 },
+    { date: '2024-06-02', value: 100 }
+  ];
+  */
   let gmHeatmapData = $derived.by(() => {
     const what = Object.values(
       gms?.reduce?.((acc, { date }) => {
@@ -40,8 +46,6 @@
   });
 
   let cal = new CalHeatmap();
-
-  $inspect(gmHeatmapData);
 
   /**
    * Fetch gms
@@ -111,7 +115,9 @@
         // timestamp
         tx.pure.u64(timestamp),
         // gm_tracker: &mut GmTracker,
-        tx.object(GM_TRACKER_ID)
+        tx.object(GM_TRACKER_ID),
+        // treasury_cap_holder: &mut TreasuryCapHolder,
+        tx.object(TREASURY_CAP_HOLDER_ID)
       ]
     });
 
@@ -156,6 +162,8 @@
       gms = [...gms, mockCreatedGm];
 
       commitMessage = '';
+      toast.success('gm committed');
+
       // fetchGms();
     } catch (error: any) {
       console.log('error: ', error);
@@ -250,9 +258,6 @@
       <Input type="text" placeholder="gm" class="max-w-xs" bind:value={commitMessage} />
 
       <Button onclick={handleGmCommit} disabled={!isCommitEnabled}>Commit</Button>
-      <!-- <Button onclick={fetchGms} disabled={!walletAdapter.currentAccount}
-        >Fetch gms</Button
-      > -->
     </form>
   </div>
 </div>
