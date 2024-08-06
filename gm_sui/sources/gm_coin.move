@@ -1,4 +1,6 @@
 module gm_sui::gm_coin {
+    use std::ascii;
+    use sui::url;
     use sui::coin::{Self, TreasuryCap};
 
     public struct GM_COIN has drop {}
@@ -15,7 +17,7 @@ module gm_sui::gm_coin {
             b"GMC",
             b"GM Coin",
             b"gm",
-            option::none(),
+            option::some(url::new_unsafe(ascii::string(b"https://keylayapps.nyc3.cdn.digitaloceanspaces.com/gm-sui-coin.png"))),
             ctx
         );
 

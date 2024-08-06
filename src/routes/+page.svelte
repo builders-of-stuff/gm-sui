@@ -4,7 +4,6 @@
     walletAdapter
   } from '@builders-of-stuff/svelte-sui-wallet-adapter';
   import CalHeatmap from 'cal-heatmap';
-  import { DateTime } from 'luxon';
   import { Transaction } from '@mysten/sui/transactions';
   import { toast } from 'svelte-sonner';
   // @ts-ignore
