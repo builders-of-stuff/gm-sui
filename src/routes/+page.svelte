@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { fade } from 'svelte/transition';
   import {
     ConnectButton,
-    walletAdapter
+    devnetWalletAdapter as walletAdapter
   } from '@builders-of-stuff/svelte-sui-wallet-adapter';
   import CalHeatmap from 'cal-heatmap';
   import { Transaction } from '@mysten/sui/transactions';
@@ -19,11 +20,24 @@
     GM_TRACKER_ID,
     TREASURY_CAP_HOLDER_ID
   } from '$lib/shared/shared.constant';
+  import { formatTime, linkifyGmId } from '$lib/shared/shared-tools';
 
   let commitMessage = $state('');
-  let isCommitEnabled = $derived(!!commitMessage && !!walletAdapter.currentAccount);
   let gms = $state([]) as any;
+  let activelyViewedGms = $state([]) as any;
   let hasFetched = $state(false);
+
+  let isCommitEnabled = $derived(
+    !!commitMessage && !!walletAdapter.currentAccount?.address
+  );
+  const showGmsForTheDay = $derived.by(() => {
+    return activelyViewedGms.length > 0;
+  });
+  const activelyViewedGmsDay = $derived.by(() => {
+    return activelyViewedGms.length > 0
+      ? new Date(parseInt(String(activelyViewedGms[0].timestamp))).toLocaleDateString()
+      : '';
+  });
 
   /**
    * e.g. [
@@ -33,7 +47,7 @@
   ];
   */
   let gmHeatmapData = $derived.by(() => {
-    const what = Object.values(
+    const heatmapData = Object.values(
       gms?.reduce?.((acc, { date }) => {
         acc[date] = acc[date] || { date, value: 0 };
         acc[date].value++;
@@ -41,10 +55,33 @@
       }, {})
     );
 
-    return what;
+    return heatmapData;
   });
 
   let cal = new CalHeatmap();
+
+  /**
+   * Set actively viewed gms
+   */
+  // https://cal-heatmap.com/docs/events#click
+  cal.on('click', (event, timestamp, value) => {
+    /**
+     * Filter gms based on timestamp (start of day to end of day)
+     */
+    let startDate = new Date(parseInt(String(timestamp)));
+    let endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 1);
+
+    let clickedDayGms = gms.filter((item) => {
+      let itemTimestamp = parseInt(item.timestamp); // Convert string timestamp to number
+      return itemTimestamp >= startDate.getTime() && itemTimestamp < endDate.getTime();
+    });
+
+    // Sort the filtered results by timestamp in descending order
+    clickedDayGms.sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp));
+
+    activelyViewedGms = clickedDayGms;
+  });
 
   /**
    * Fetch gms
@@ -153,7 +190,7 @@
         id: {
           id: newGmId
         },
-        sender: walletAdapter.currentAccount,
+        sender: walletAdapter?.currentAccount?.address,
         message: commitMessage,
         timestamp: Date.now(),
         date: formattedDate
@@ -241,7 +278,7 @@
   <div class="mt-2 flex justify-end">
     <ConnectButton {walletAdapter} />
   </div>
-  <div class="relative px-6 py-24 sm:rounded-3xl sm:px-24 xl:py-32">
+  <div class="relative px-6 pb-12 pt-24 sm:rounded-3xl sm:px-24 xl:pb-24 xl:pt-32">
     <!-- Header -->
     <h2
       class="mx-auto max-w-2xl text-center text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl"
@@ -250,7 +287,7 @@
     </h2>
 
     <!-- Calendar Heatmap -->
-    <div id="cal-heatmap" class="mt-4 flex justify-center"></div>
+    <div id="cal-heatmap" class="mt-4 flex justify-center overflow-x-auto"></div>
 
     <!-- Text field -->
     <form class="mx-auto mt-10 flex max-w-md gap-x-4">
@@ -260,3 +297,47 @@
     </form>
   </div>
 </div>
+
+<!-- GMs for selected day -->
+{#if showGmsForTheDay}
+  <h3 class="mb-5 text-3xl font-medium leading-6 text-gray-900">
+    GMs on {activelyViewedGmsDay}
+  </h3>
+
+  <div transition:fade class="bg-white p-4">
+    <div class="relative border-l border-gray-200">
+      {#each activelyViewedGms as item (item.timestamp)}
+        <div class="mb-10 ml-4">
+          <!-- Date -->
+          <div
+            class="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-indigo-600"
+          ></div>
+          <time class="mb-1 text-sm font-normal leading-none text-gray-400"
+            >{new Date(parseInt(item.timestamp)).toLocaleDateString()} - {formatTime(
+              item.timestamp
+            )}
+          </time>
+
+          <!-- Message -->
+          <h3 class="text-lg font-semibold text-gray-900">
+            <a
+              href={linkifyGmId(item?.id?.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-indigo-600 hover:underline"
+            >
+              {item.message}
+            </a>
+          </h3>
+
+          <!-- Sender -->
+          <p class="text-base font-normal text-gray-500">
+            {item.sender.substring(0, 5)}.....{item.sender.substring(
+              item.sender.length - 3
+            )}
+          </p>
+        </div>
+      {/each}
+    </div>
+  </div>
+{/if}
