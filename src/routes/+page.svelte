@@ -1,8 +1,10 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
+  import { PUBLIC_NODE_ENV } from '$env/static/public';
   import {
     ConnectButton,
-    devnetWalletAdapter as walletAdapter
+    devnetWalletAdapter,
+    walletAdapter as productionWalletAdapter
   } from '@builders-of-stuff/svelte-sui-wallet-adapter';
   import CalHeatmap from 'cal-heatmap';
   import { Transaction } from '@mysten/sui/transactions';
@@ -15,12 +17,11 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
 
-  import {
-    GM_PACKAGE_ID,
-    GM_TRACKER_ID,
-    TREASURY_CAP_HOLDER_ID
-  } from '$lib/shared/shared.constant';
+  import { getObjectId } from '$lib/shared/shared-tools';
   import { formatTime, linkifyGmId } from '$lib/shared/shared-tools';
+
+  const walletAdapter =
+    PUBLIC_NODE_ENV === 'development' ? devnetWalletAdapter : productionWalletAdapter;
 
   let commitMessage = $state('');
   let gms = $state([]) as any;
@@ -72,7 +73,7 @@
     let endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 1);
 
-    let clickedDayGms = gms.filter((item) => {
+    let clickedDayGms = gms.filter((item: any) => {
       let itemTimestamp = parseInt(item.timestamp); // Convert string timestamp to number
       return itemTimestamp >= startDate.getTime() && itemTimestamp < endDate.getTime();
     });
@@ -88,7 +89,7 @@
    */
   const fetchGms = async () => {
     const object = await walletAdapter.suiClient.getObject({
-      id: GM_TRACKER_ID,
+      id: getObjectId('GM_TRACKER_ID'),
       options: {
         showContent: true,
         showDisplay: true,
@@ -142,7 +143,7 @@
     const timestamp = Date.now();
 
     tx.moveCall({
-      target: `${GM_PACKAGE_ID}::gm::new_gm`,
+      target: `${getObjectId('GM_PACKAGE_ID')}::gm::new_gm`,
       arguments: [
         // key,
         tx.pure.string(`testy-${Math.random()}`),
@@ -151,9 +152,9 @@
         // timestamp
         tx.pure.u64(timestamp),
         // gm_tracker: &mut GmTracker,
-        tx.object(GM_TRACKER_ID),
+        tx.object(getObjectId('GM_TRACKER_ID')),
         // treasury_cap_holder: &mut TreasuryCapHolder,
-        tx.object(TREASURY_CAP_HOLDER_ID)
+        tx.object(getObjectId('TREASURY_CAP_HOLDER_ID'))
       ]
     });
 
