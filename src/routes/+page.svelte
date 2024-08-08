@@ -293,7 +293,7 @@
 
     <!-- Text field -->
     {#if isWalletConnected}
-      <form transition:fade class="mx-auto mt-10 flex max-w-md gap-x-4">
+      <form transition:fade class="mx-auto mt-10 flex max-w-md gap-x-2">
         <Input
           type="text"
           placeholder="gm"
