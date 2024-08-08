@@ -28,6 +28,7 @@
   let activelyViewedGms = $state([]) as any;
   let hasFetched = $state(false);
 
+  const isWalletConnected = $derived.by(() => walletAdapter.currentAccount?.address);
   let isCommitEnabled = $derived(
     !!commitMessage && !!walletAdapter.currentAccount?.address
   );
@@ -291,17 +292,24 @@
     <div id="cal-heatmap" class="mt-4 flex justify-center overflow-x-auto"></div>
 
     <!-- Text field -->
-    <form class="mx-auto mt-10 flex max-w-md gap-x-4">
-      <Input type="text" placeholder="gm" class="max-w-xs" bind:value={commitMessage} />
+    {#if isWalletConnected}
+      <form transition:fade class="mx-auto mt-10 flex max-w-md gap-x-4">
+        <Input
+          type="text"
+          placeholder="gm"
+          class="max-w-xs"
+          bind:value={commitMessage}
+        />
 
-      <Button onclick={handleGmCommit} disabled={!isCommitEnabled}>Commit</Button>
-    </form>
+        <Button onclick={handleGmCommit} disabled={!isCommitEnabled}>Commit</Button>
+      </form>
+    {/if}
   </div>
 </div>
 
 <!-- GMs for selected day -->
 {#if showGmsForTheDay}
-  <h3 class="mb-5 text-3xl font-medium leading-6 text-gray-900">
+  <h3 class="text-1xl mb-2 font-medium leading-6 text-gray-900">
     GMs on {activelyViewedGmsDay}
   </h3>
 
