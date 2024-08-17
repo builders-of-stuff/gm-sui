@@ -239,7 +239,7 @@
           color: {
             scheme: 'Cool',
             type: 'linear',
-            domain: [0, 50]
+            domain: [0, 10]
           }
         }
       },
